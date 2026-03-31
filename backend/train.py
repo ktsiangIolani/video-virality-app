@@ -3,6 +3,8 @@ from tensorflow.keras import layers, models, regularizers
 from tensorflow.keras.applications import EfficientNetB0
 from tensorflow.keras.callbacks import CSVLogger, EarlyStopping
 from sklearn.preprocessing import StandardScaler
+from tensorflow.keras.callbacks import CSVLogger, EarlyStopping, ReduceLROnPlateau
+from tensorflow.keras.optimizers import Adam
 import pandas as pd
 import numpy as np
 import joblib
@@ -77,8 +79,19 @@ class MultimodalGenerator(tf.keras.utils.Sequence):
 # ==========================================
 # x1 -> image
 x1_input = layers.Input(shape=(224, 224, 3), name='Group1_Input')
+
+# Add Data Augmentation natively in the graph (has the model learn more robust features of thumbnails)
+x1_aug = layers.RandomFlip("horizontal")(x1_input)
+x1_aug = layers.RandomRotation(0.1)(x1_aug)
+x1_aug = layers.RandomZoom(0.1)(x1_aug)
+
 base_model = EfficientNetB0(weights='imagenet', include_top=False)
-base_model.trainable = False 
+base_model.trainable = True
+
+# !! Freeze all layers except for the final block
+for layer in base_model.layers[:-20]: 
+    layer.trainable = False
+
 x1 = base_model(x1_input)
 x1 = layers.GlobalAveragePooling2D()(x1)
 x1 = layers.Dense(128, activation='relu', name='Group1_Final')(x1)
@@ -111,10 +124,14 @@ x5_flat = layers.Flatten()(x5_embedding)
 # Merging nodes
 merged = layers.Concatenate()([x1, x2, x3, x4, x5_flat])
 x = layers.Dense(32, activation='relu')(merged)
+x = layers.Dropout(0.2)(x) # Added Dropout
 output = layers.Dense(2, activation='linear', name='Results')(x)
 
 model = models.Model(inputs=[x1_input, x2_input, x3_input, x4_input, x5_input], outputs=output)
-model.compile(optimizer='adam', loss='mse')
+model.compile(
+    optimizer=Adam(learning_rate=1e-4), 
+    loss=tf.keras.losses.Huber(delta=1.0) # changed from MSE to account for outliers
+)
 
 # ==========================================
 # 3. Fitting data into the model
@@ -125,6 +142,10 @@ model.compile(optimizer='adam', loss='mse')
 y = np.log1p(data[['views', 'likes']].values).astype('float32')
 
 all_indices = np.arange(len(y))
+
+# Shuffles indicies to counteract any bias
+np.random.seed(42)
+np.random.shuffle(all_indices)
 
 # Manually split indices at 80%
 split_idx = int(0.8 * len(y))
@@ -181,6 +202,14 @@ early_stopping = EarlyStopping(
 # 'append=True' is great because if your training crashes and you restart, 
 # it won't delete your previous progress.
 csv_logger = CSVLogger('training_history.csv', append=True, separator=',')
+
+reduce_lr = ReduceLROnPlateau( # learning rate reducer function
+    monitor='val_loss', 
+    factor=0.2,       # Reduce learning rate to 20% of its current value
+    patience=4,       # Do this after 4 epochs of no improvement
+    min_lr=1e-6,      # Don't go below this rate
+    verbose=1
+)
 
 # Train using the generators! 
 model.fit(
