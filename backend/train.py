@@ -155,7 +155,8 @@ val_idx = all_indices[split_idx:]
 # Prepare NumPy/Pandas Data in RAM
 x_group2 = np.load('description_semantics.npy')
 
-x3_df = data[['title_cLength', 'title_hasNumber', 'title_capsRatio', 'title_exCount', 'title_endInQ', 'title_infoDensity', 'tags_count', 'tags_title_overlapRatio', 'description_tokenCounts', 'Negative', 'Neutral', 'Positive']]
+data['log_exclamation'] = np.log1p(data['title_exCount'].values).astype('float32')
+x3_df = data[['title_cLength', 'title_hasNumber', 'title_capsRatio', 'log_exclamation', 'title_endInQ', 'title_infoDensity', 'tags_count', 'tags_title_overlapRatio', 'description_tokenCounts', 'Negative', 'Neutral', 'Positive']]
 x3_df = x3_df.fillna(0).astype('float32')
 scaler = StandardScaler()
 scaler.fit(x3_df.values[:split_idx])
