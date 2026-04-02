@@ -50,9 +50,16 @@ class MultimodalGenerator(tf.keras.utils.Sequence):
         # Get the specific batch of "global IDs" for this step
         batch_indices = self.indices[start:end]
 
+        # Sorted and undoed indices
+        sort_idx = np.argsort(batch_indices)
+        rev_idx = np.argsort(sort_idx)
+
+        sorted_indices = batch_indices[sort_idx]
+        batch_x1_sorted = self.hf['images'][sorted_indices.tolist()]
+
         # Use those IDs to pull the CORRECT images from the HDF5
         # We use list-based indexing for the H5 file to ensure alignment
-        batch_x1 = self.hf['images'][batch_indices.tolist()]
+        batch_x1 = batch_x1_sorted[rev_idx]
 
         # Nuclear option for x5
         raw_x5 = self.x5_data[start:end]
@@ -202,7 +209,7 @@ early_stopping = EarlyStopping(
 # Setup the logger
 # 'append=True' is great because if your training crashes and you restart, 
 # it won't delete your previous progress.
-csv_logger = CSVLogger('training_history.csv', append=True, separator=',')
+csv_logger = CSVLogger('training_history.csv', append=False, separator=',')
 
 reduce_lr = ReduceLROnPlateau( # learning rate reducer function
     monitor='val_loss', 
@@ -217,7 +224,7 @@ model.fit(
     train_generator,
     validation_data=val_generator,
     epochs=100,
-    callbacks=[csv_logger, early_stopping] # The model will now "watch itself"
+    callbacks=[csv_logger, early_stopping, reduce_lr] # The model will now "watch itself"
 )
 
 model.save('virality_model.keras')
