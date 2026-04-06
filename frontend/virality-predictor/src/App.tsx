@@ -79,17 +79,20 @@ export default function App() {
   };
 
   // Derived metrics computed from the views + likes the backend returns
-  const getEngagementRate = (views, likes) => {
-    if (!views || views === 0) return '0.00%';
-    return ((likes / views) * 100).toFixed(2) + '%';
+  const getRevenue = (views) => {
+    const revenue = views * 0.001;
+    if (revenue >= 1000) return '$' + (revenue / 1000).toFixed(1) + 'K';
+    return '$' + revenue.toFixed(2);
   };
 
-  const getViralityTier = (views) => {
-    if (views >= 10_000_000) return { label: '🔥 Mega Viral',    color: 'text-red-600' };
-    if (views >= 1_000_000)  return { label: '🚀 Viral',         color: 'text-orange-500' };
-    if (views >= 100_000)    return { label: '📈 Trending',       color: 'text-yellow-600' };
-    if (views >= 10_000)     return { label: '👍 Solid',          color: 'text-green-600' };
-    return                          { label: '🌱 Growing',        color: 'text-blue-500' };
+  const getViralityScore = (views) => {
+    // Logarithmic scale: 10M+ views = 10/10
+    const score = Math.min(10, Math.round((Math.log10(Math.max(views, 1)) / Math.log10(10_000_000)) * 10));
+    if (score >= 9) return { score, label: '🔥 Mega Viral' };
+    if (score >= 7) return { score, label: '🚀 Viral' };
+    if (score >= 5) return { score, label: '📈 Trending' };
+    if (score >= 3) return { score, label: '👍 Solid' };
+    return { score, label: '🌱 Growing' };
   };
 
   return (
@@ -194,7 +197,7 @@ export default function App() {
               />
               <label
                 htmlFor="thumbnail"
-                className="flex flex-col items-center justify-center w-full h-48 border-2 border-dashed border-red-300 rounded-lg cursor-pointer hover:border-red-600 transition-all bg-red-50/30 hover:bg-red-50"
+                className="flex flex-col items-center justify-center w-full h-48 border-2 border-dashed border-red-300 rounded-lg cursor-pointer hover:border-red-600 transition-all bg-red-50/30 hover:bg-red-600 group"
               >
                 {thumbnailPreview ? (
                   <div className="relative w-full h-full">
@@ -209,11 +212,11 @@ export default function App() {
                   </div>
                 ) : (
                   <div className="flex flex-col items-center">
-                    <div className="bg-red-100 p-4 rounded-full mb-3">
-                      <Upload className="w-8 h-8 text-red-600" />
+                    <div className="bg-red-100 group-hover:bg-white/20 p-4 rounded-full mb-3 transition-colors">
+                      <Upload className="w-8 h-8 text-red-600 group-hover:text-white transition-colors" />
                     </div>
-                    <span className="text-gray-700">Click to upload thumbnail</span>
-                    <span className="text-sm text-gray-500 mt-1">PNG, JPG up to 10MB</span>
+                    <span className="text-gray-700 group-hover:text-white transition-colors">Click to upload thumbnail</span>
+                    <span className="text-sm text-gray-500 group-hover:text-red-100 mt-1 transition-colors">PNG, JPG up to 10MB</span>
                   </div>
                 )}
               </label>
@@ -224,7 +227,7 @@ export default function App() {
           <button
             type="submit"
             disabled={isLoading}
-            className="w-full py-4 px-6 bg-white text-red-600 border-2 border-red-600 rounded-full transition-all duration-300 ease-in-out hover:bg-red-600 hover:text-white hover:scale-105 active:scale-100 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 disabled:hover:bg-white disabled:hover:text-red-600 shadow-lg hover:shadow-xl"
+            className="w-full py-4 px-6 bg-red-600 text-white border-2 border-red-600 rounded-full transition-all duration-300 ease-in-out hover:bg-red-700 hover:border-red-700 hover:scale-105 active:scale-100 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 disabled:hover:bg-red-600 disabled:hover:border-red-600 shadow-lg hover:shadow-xl"
           >
             <span className="text-lg">
               {isLoading ? '⏳ Analyzing Your Content...' : '🎯 Predict My Virality!'}
@@ -283,7 +286,7 @@ export default function App() {
 
             {/* Row 2: Derived metrics (computed from views + likes) */}
             <div className="grid md:grid-cols-2 gap-6">
-              {/* Engagement Rate */}
+              {/* Predicted Revenue */}
               <div className="bg-gradient-to-br from-red-50 to-white rounded-xl p-8 border-2 border-red-200 shadow-lg hover:shadow-xl transition-all hover:scale-105">
                 <div className="flex items-center justify-center mb-4">
                   <div className="w-20 h-20 bg-gradient-to-br from-red-400 to-red-500 rounded-full flex items-center justify-center shadow-lg">
@@ -291,17 +294,17 @@ export default function App() {
                   </div>
                 </div>
                 <div className="text-center">
-                  <p className="text-gray-600 mb-2 text-lg">Engagement Rate</p>
+                  <p className="text-gray-600 mb-2 text-lg">Predicted Revenue</p>
                   <p className="text-5xl text-red-600 mb-1" style={{ fontFamily: 'Arial, sans-serif' }}>
-                    {getEngagementRate(prediction.views, prediction.likes)}
+                    {getRevenue(prediction.views)}
                   </p>
                   <div className="inline-block bg-red-100 text-red-700 px-3 py-1 rounded-full text-sm mt-2">
-                    📊 Likes ÷ Views
+                    💰 Views × $0.001
                   </div>
                 </div>
               </div>
 
-              {/* Virality Tier */}
+              {/* Virality Score */}
               <div className="bg-gradient-to-br from-red-50 to-white rounded-xl p-8 border-2 border-red-200 shadow-lg hover:shadow-xl transition-all hover:scale-105">
                 <div className="flex items-center justify-center mb-4">
                   <div className="w-20 h-20 bg-gradient-to-br from-red-400 to-red-500 rounded-full flex items-center justify-center shadow-lg">
@@ -309,11 +312,15 @@ export default function App() {
                   </div>
                 </div>
                 <div className="text-center">
-                  <p className="text-gray-600 mb-2 text-lg">Virality Tier</p>
-                  <p className={`text-3xl font-semibold mb-1 ${getViralityTier(prediction.views).color}`}>
-                    {getViralityTier(prediction.views).label}
+                  <p className="text-gray-600 mb-2 text-lg">Virality Score</p>
+                  <p className="text-5xl text-red-600 mb-1" style={{ fontFamily: 'Arial, sans-serif' }}>
+                    {getViralityScore(prediction.views).score}
+                    <span className="text-2xl text-gray-400"> / 10</span>
                   </p>
-                  <div className="inline-block bg-red-100 text-red-700 px-3 py-1 rounded-full text-sm mt-2">
+                  <p className="text-lg font-semibold text-red-500 mb-1">
+                    {getViralityScore(prediction.views).label}
+                  </p>
+                  <div className="inline-block bg-red-100 text-red-700 px-3 py-1 rounded-full text-sm mt-1">
                     🏆 Overall Potential
                   </div>
                 </div>
