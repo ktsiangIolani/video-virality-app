@@ -42,7 +42,7 @@ export default function App() {
     try {
       // 2. Send the package to the Python Flask server
       // FIX: route is /api/predict (not /predict) to match app.py's @app.route('/api/predict')
-      const response = await fetch('http://localhost:5000/api/predict', {
+      const response = await fetch('http://34.168.75.157:5000/api/predict', {
         method: 'POST',
         body: formData,
       });
