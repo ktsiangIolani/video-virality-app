@@ -42,10 +42,13 @@ export default function App() {
     try {
       // 2. Send the package to the Python Flask server
       // FIX: route is /api/predict (not /predict) to match app.py's @app.route('/api/predict')
-      const response = await fetch('http://34.168.75.157:5000/api/predict', {
-        method: 'POST',
-        body: formData,
-      });
+      const response = await fetch(
+        "https://video-virality-app-be-669394454391.europe-west1.run.app/api/predict",
+        {
+          method: "POST",
+          body: formData,
+        },
+      );
 
       if (!response.ok) {
         throw new Error(`Server responded with a ${response.status} status.`);
