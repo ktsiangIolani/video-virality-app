@@ -1,0 +1,13 @@
+__pycache__/
+*.pyc
+*.pyo
+*.csv
+*.npy
+*.h5
+*.keras
+*.pkl
+*.jpg
+*.jpeg
+*.png
+*.txt
+!requirements.txt

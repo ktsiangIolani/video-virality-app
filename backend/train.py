@@ -1,3 +1,5 @@
+from google.cloud import storage
+import io
 import tensorflow as tf
 from tensorflow.keras import layers, models, regularizers
 from tensorflow.keras.applications import EfficientNetB0
@@ -10,7 +12,10 @@ import numpy as np
 import joblib
 import h5py
 
-data = pd.read_csv('processedUSvideos.csv')
+gcs_client = storage.Client()
+bucket = gcs_client.bucket('video-virality')
+
+data = pd.read_csv(io.BytesIO(bucket.blob('processedUSvideos.csv').download_as_bytes()))
 
 # =============================
 # REMOVE LATER
@@ -160,7 +165,10 @@ train_idx = all_indices[:split_idx]
 val_idx = all_indices[split_idx:]
 
 # Prepare NumPy/Pandas Data in RAM
-x_group2 = np.load('description_semantics.npy')
+gcs_client = storage.Client()
+bucket = gcs_client.bucket('video-virality')
+blob = bucket.blob('description_semantics.npy')
+x_group2 = np.load(io.BytesIO(blob.download_as_bytes()))
 
 data['log_exclamation'] = np.log1p(data['title_exCount'].values).astype('int32')
 x3_df = data[['title_cLength', 'title_hasNumber', 'title_capsRatio', 'log_exclamation', 'title_endInQ', 'title_infoDensity', 'tags_count', 'tags_title_overlapRatio', 'description_tokenCounts', 'Negative', 'Neutral', 'Positive']]
@@ -170,12 +178,15 @@ scaler.fit(x3_df.values[:split_idx])
 x_group3 = scaler.transform(x3_df.values).astype('float32')
 
 joblib.dump(scaler, 'scaler.pkl')
+bucket.blob('scaler.pkl').upload_from_filename('scaler.pkl')
 print("Saved scaler.pkl successfully!")
 
-x_group4 = np.load('top_tags_binarized.npy').astype('int32')
+x_group4 = np.load(io.BytesIO(bucket.blob('top_tags_binarized.npy').download_as_bytes())).astype('int32')
 x_group5 = data['main_tag'].fillna('none').astype(str).values
 
-# Create Training Generator 
+bucket.blob('processed_images.h5').download_to_filename('processed_images.h5')
+
+# Create Training Generator
 train_generator = MultimodalGenerator(
     h5_path='processed_images.h5',
     indices=train_idx, # Pass the first 80% of IDs

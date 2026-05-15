@@ -8,6 +8,7 @@ from io import BytesIO
 import numpy as np
 import pandas as pd
 import h5py
+from google.cloud import storage
 
 # 1. Setup paths
 root_dir = Path(__file__).resolve().parent.parent.parent
@@ -57,4 +58,6 @@ with h5py.File(h5_path, 'w') as hf:
         if i % 500 == 0 and i > 0:
             print(f"Saved {i} / {num_images} images to disk...")
 
-print(f"\n--- SUCCESS: Completely saved highly-optimized image tensor to {h5_path} ---")
+gcs_client = storage.Client()
+gcs_client.bucket('video-virality').blob('processed_images.h5').upload_from_filename(str(h5_path))
+print(f"\n--- SUCCESS: Uploaded processed_images.h5 to GCS bucket video-virality ---")

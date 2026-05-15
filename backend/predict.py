@@ -1,10 +1,12 @@
 import os
 import sys
+import io
 import numpy as np
 import pandas as pd
 import tensorflow as tf
 import joblib
 import re
+from google.cloud import storage
 from PIL import Image, ImageOps
 
 # Import your protected preprocessing functions!
@@ -21,7 +23,8 @@ from preprocessing.text.sentiment_tokens import analyze_sentiment, count_tokens
 print("Loading Models and Tools into memory...")
 try:
     model = tf.keras.models.load_model('virality_model.keras')
-    scaler = joblib.load('scaler.pkl')
+    gcs_bucket = storage.Client().bucket('video-virality')
+    scaler = joblib.load(io.BytesIO(gcs_bucket.blob('scaler.pkl').download_as_bytes()))
     mlb = joblib.load('tags_binarizer.pkl')
     print("✅ All tools loaded successfully!")
 except Exception as e:
